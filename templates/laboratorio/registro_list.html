@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+{% block title %}Registros · Acidificación del agua{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h1 class="h3 mb-0">Registros de laboratorio</h1>
+</div>
+
+<form method="get" class="row g-2 mb-4">
+  <div class="col-md-8">
+    <input type="text" name="q" value="{{ q }}" class="form-control"
+           placeholder="Buscar por nombre de equipo o fecha (AAAA-MM-DD o DD/MM/AAAA)">
+  </div>
+  <div class="col-md-4 d-flex gap-2">
+    <button type="submit" class="btn btn-primary">Buscar</button>
+    {% if q %}<a href="{% url 'registro_list' %}" class="btn btn-outline-secondary">Limpiar</a>{% endif %}
+  </div>
+</form>
+
+<div class="table-responsive">
+  <table class="table table-hover align-middle bg-white shadow-sm">
+    <thead class="table-light">
+      <tr>
+        <th>Equipo</th><th>Fecha</th>
+        <th>pH 1</th><th>pH 2</th><th>pH 3</th><th>pH 4</th>
+        <th>Estado</th><th class="text-end">Acciones</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for r in registros %}
+        <tr {% if r.tiene_acidez_critica %}class="table-danger"{% endif %}>
+          <td>{{ r.equipo }}</td>
+          <td>{{ r.fecha_registro|date:"d/m/Y H:i" }}</td>
+          <td>{{ r.ph_1 }}</td><td>{{ r.ph_2 }}</td><td>{{ r.ph_3 }}</td><td>{{ r.ph_4 }}</td>
+          <td>
+            {% if r.tiene_acidez_critica %}
+              <span class="badge text-bg-danger">Acidez crítica</span>
+            {% else %}
+              <span class="badge text-bg-success">Normal</span>
+            {% endif %}
+          </td>
+          <td class="text-end">
+            <a href="{% url 'registro_detail' r.pk %}" class="btn btn-sm btn-outline-primary">Ver</a>
+            {% if user.is_authenticated %}
+              <a href="{% url 'registro_update' r.pk %}" class="btn btn-sm btn-outline-secondary">Editar</a>
+              <a href="{% url 'registro_delete' r.pk %}" class="btn btn-sm btn-outline-danger">Eliminar</a>
+            {% endif %}
+          </td>
+        </tr>
+      {% empty %}
+        <tr><td colspan="8" class="text-center text-muted py-4">No hay registros{% if q %} que coincidan con «{{ q }}»{% endif %}.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+{% if is_paginated %}
+<nav aria-label="Paginación">
+  <ul class="pagination justify-content-center">
+    {% if page_obj.has_previous %}
+      <li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if q %}&q={{ q|urlencode }}{% endif %}">Anterior</a></li>
+    {% else %}
+      <li class="page-item disabled"><span class="page-link">Anterior</span></li>
+    {% endif %}
+    <li class="page-item disabled"><span class="page-link">Página {{ page_obj.number }} de {{ paginator.num_pages }}</span></li>
+    {% if page_obj.has_next %}
+      <li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}{% if q %}&q={{ q|urlencode }}{% endif %}">Siguiente</a></li>
+    {% else %}
+      <li class="page-item disabled"><span class="page-link">Siguiente</span></li>
+    {% endif %}
+  </ul>
+</nav>
+{% endif %}
+{% endblock %}

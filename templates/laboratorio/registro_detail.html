@@ -1,0 +1,96 @@
+{% extends "base.html" %}
+{% block title %}{{ registro.equipo }} · Detalle{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-start mb-3">
+  <div>
+    <h1 class="h3 mb-1">{{ registro.equipo }}</h1>
+    <p class="text-muted mb-0">Registrado el {{ registro.fecha_registro|date:"d/m/Y H:i" }}</p>
+  </div>
+  <div class="d-flex gap-2">
+    <a href="{% url 'registro_list' %}" class="btn btn-outline-secondary btn-sm">← Volver</a>
+    {% if user.is_authenticated %}
+      <a href="{% url 'registro_update' registro.pk %}" class="btn btn-outline-primary btn-sm">Editar</a>
+      <a href="{% url 'registro_delete' registro.pk %}" class="btn btn-outline-danger btn-sm">Eliminar</a>
+    {% endif %}
+  </div>
+</div>
+
+<div class="card shadow-sm mb-4">
+  <div class="card-header">Tomas de pH vs. resultados procesados</div>
+  <div class="table-responsive">
+    <table class="table table-striped mb-0 align-middle">
+      <thead>
+        <tr><th>Medida</th><th>pH</th><th>Índice de acidez 10<sup>(7 − pH)</sup></th><th>Estado</th></tr>
+      </thead>
+      <tbody>
+        {% for fila in registro.filas %}
+          <tr {% if fila.critico %}class="table-danger"{% endif %}>
+            <td>{{ fila.n }}</td>
+            <td>{{ fila.ph }}</td>
+            <td>{{ fila.resultado|stringformat:".4g" }}</td>
+            <td>
+              {% if fila.critico %}<span class="badge text-bg-danger">Crítica (pH &lt; {{ umbral }})</span>
+              {% else %}<span class="badge text-bg-success">Normal</span>{% endif %}
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="card shadow-sm">
+  <div class="card-header">Gráfica</div>
+  <div class="card-body">
+    <canvas id="grafica" height="110"></canvas>
+    <hr>
+    <p class="mb-0"><strong>Leyenda:</strong> {{ registro.leyenda_mostrada|linebreaksbr }}</p>
+  </div>
+</div>
+
+{{ chart_data|json_script:"chart-data" }}
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+<script>
+  const datos = JSON.parse(document.getElementById("chart-data").textContent);
+  new Chart(document.getElementById("grafica"), {
+    type: "line",
+    data: {
+      labels: datos.labels,
+      datasets: [
+        {
+          label: "pH medido",
+          data: datos.ph,
+          yAxisID: "yPh",
+          borderColor: "#0d6efd",
+          backgroundColor: "#0d6efd",
+          tension: 0.2,
+        },
+        {
+          label: "Índice de acidez 10^(7 − pH)",
+          data: datos.resultados,
+          yAxisID: "yIndice",
+          borderColor: "#dc3545",
+          backgroundColor: "#dc3545",
+          borderDash: [6, 4],
+          tension: 0.2,
+        },
+      ],
+    },
+    options: {
+      responsive: true,
+      scales: {
+        yPh: { type: "linear", position: "left", min: 0, max: 14, title: { display: true, text: "pH" } },
+        yIndice: {
+          type: "logarithmic",
+          position: "right",
+          grid: { drawOnChartArea: false },
+          title: { display: true, text: "Índice de acidez (escala log)" },
+        },
+      },
+    },
+  });
+</script>
+{% endblock %}
